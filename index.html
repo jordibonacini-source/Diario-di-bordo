@@ -111,7 +111,7 @@
 
 <div class="container">
     <h2>Diario Domiciliare Al Volo</h2>
-    <p class="subtitle">Parla alla fine dell'intervento. Il testo verrà trascritto in tempo reale.</p>
+    <p class="subtitle">Parla alla fine dell'intervento. Il testo verrà trascritto senza ripetizioni.</p>
 
     <div class="btn-group">
         <button id="startBtn" onclick="startRecording()">🎙️ Avvia Registrazione</button>
@@ -120,14 +120,14 @@
 
     <div class="status" id="statusText">Stato: Pronto per registrare</div>
 
-    <textarea id="resultText" placeholder="La trascrizione comparirà qui mentre parli... Puoi anche correggerla manualmente prima di copiarla."></textarea>
+    <textarea id="resultText" placeholder="La trascrizione comparirà qui..."></textarea>
 
     <button class="copy-btn" onclick="copyText()">📋 Copia negli Appunti</button>
 
     <div class="instructions">
         <strong>Come usarla:</strong><br>
         1. Premi "Avvia Registrazione" mentre vai verso la macchina.<br>
-        2. Parla con calma (la punteggiatura viene gestita dal telefono).<br>
+        2. Parla con calma.<br>
         3. A casa, premi "Copia" e incollalo nel Google Drive della famiglia.
     </div>
 </div>
@@ -141,7 +141,6 @@
     let recognition;
     let isRecognizing = false;
 
-    // Controllo compatibilità browser (Funziona nativamente su Chrome Android e Safari iOS)
     window.SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
@@ -149,9 +148,9 @@
         startBtn.disabled = true;
     } else {
         recognition = new SpeechRecognition();
-        recognition.lang = 'it-IT'; // Impostato in italiano
-        recognition.interimResults = true; // Mostra il testo mentre parli
-        recognition.continuous = true; // Continua a registrare finché non stoppi
+        recognition.lang = 'it-IT';
+        recognition.interimResults = false; // Modificato a false per evitare duplicazioni in tempo reale
+        recognition.continuous = true;
 
         recognition.onstart = function() {
             isRecognizing = true;
@@ -162,12 +161,15 @@
         };
 
         recognition.onresult = function(event) {
-            let transcript = '';
+            let finalTranscript = '';
             for (let i = event.resultIndex; i < event.results.length; i++) {
-                transcript += event.results[i][0].transcript;
+                if (event.results[i].isFinal) {
+                    finalTranscript += event.results[i][0].transcript + ' ';
+                }
             }
-            // Aggiunge il testo nuovo a quello già trascritto
-            resultText.value += transcript + " ";
+            if (finalTranscript) {
+                resultText.value += finalTranscript;
+            }
         };
 
         recognition.onerror = function(event) {
@@ -201,9 +203,9 @@
 
     function copyText() {
         resultText.select();
-        resultText.setSelectionRange(0, 99999); // Per dispositivi mobili
+        resultText.setSelectionRange(0, 99999);
         navigator.clipboard.writeText(resultText.value).then(() => {
-            alert("Testo copiato negli appunti! Ora puoi incollarlo su Google Drive.");
+            alert("Testo copiato negli appunti!");
         }, () => {
             alert("Errore durante la copia.");
         });
