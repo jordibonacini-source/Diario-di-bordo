@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diario Domiciliare Al Volo</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f4f6f9;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            width: 100%;
+            max-width: 600px;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            box-sizing: border-box;
+        }
+        h2 {
+            font-size: 1.25rem;
+            color: #1a73e8;
+            margin-top: 0;
+            text-align: center;
+        }
+        p.subtitle {
+            font-size: 0.9rem;
+            color: #666;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        button {
+            flex: 1;
+            padding: 12px;
+            font-size: 1rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        #startBtn {
+            background-color: #1a73e8;
+            color: white;
+        }
+        #startBtn.recording {
+            background-color: #d93025;
+            animation: pulse 1.5s infinite;
+        }
+        #stopBtn {
+            background-color: #f1f3f4;
+            color: #333;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.6; }
+            100% { opacity: 1; }
+        }
+        textarea {
+            width: 100%;
+            height: 200px;
+            padding: 12px;
+            font-size: 1rem;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-sizing: border-box;
+            resize: vertical;
+            margin-bottom: 15px;
+        }
+        .status {
+            font-size: 0.85rem;
+            color: #555;
+            text-align: center;
+            margin-bottom: 15px;
+            font-style: italic;
+        }
+        .copy-btn {
+            width: 100%;
+            background-color: #34a853;
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            border: none;
+            cursor: pointer;
+        }
+        .instructions {
+            margin-top: 25px;
+            font-size: 0.85rem;
+            color: #777;
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Diario Domiciliare Al Volo</h2>
+    <p class="subtitle">Parla alla fine dell'intervento. Il testo verrà trascritto in tempo reale.</p>
+
+    <div class="btn-group">
+        <button id="startBtn" onclick="startRecording()">🎙️ Avvia Registrazione</button>
+        <button id="stopBtn" onclick="stopRecording()" disabled>⏹️ Ferma</button>
+    </div>
+
+    <div class="status" id="statusText">Stato: Pronto per registrare</div>
+
+    <textarea id="resultText" placeholder="La trascrizione comparirà qui mentre parli... Puoi anche correggerla manualmente prima di copiarla."></textarea>
+
+    <button class="copy-btn" onclick="copyText()">📋 Copia negli Appunti</button>
+
+    <div class="instructions">
+        <strong>Come usarla:</strong><br>
+        1. Premi "Avvia Registrazione" mentre vai verso la macchina.<br>
+        2. Parla con calma (la punteggiatura viene gestita dal telefono).<br>
+        3. A casa, premi "Copia" e incollalo nel Google Drive della famiglia.
+    </div>
+</div>
+
+<script>
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const statusText = document.getElementById('statusText');
+    const resultText = document.getElementById('resultText');
+
+    let recognition;
+    let isRecognizing = false;
+
+    // Controllo compatibilità browser (Funziona nativamente su Chrome Android e Safari iOS)
+    window.SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+        statusText.innerHTML = "❌ Il tuo browser non supporta il riconoscimento vocale. Usa Chrome o Safari aggiornati.";
+        startBtn.disabled = true;
+    } else {
+        recognition = new SpeechRecognition();
+        recognition.lang = 'it-IT'; // Impostato in italiano
+        recognition.interimResults = true; // Mostra il testo mentre parli
+        recognition.continuous = true; // Continua a registrare finché non stoppi
+
+        recognition.onstart = function() {
+            isRecognizing = true;
+            startBtn.classList.add('recording');
+            startBtn.innerText = "🔴 In ascolto...";
+            stopBtn.disabled = false;
+            statusText.innerHTML = "Stato: Registrazione in corso... parla pure.";
+        };
+
+        recognition.onresult = function(event) {
+            let transcript = '';
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                transcript += event.results[i][0].transcript;
+            }
+            // Aggiunge il testo nuovo a quello già trascritto
+            resultText.value += transcript + " ";
+        };
+
+        recognition.onerror = function(event) {
+            statusText.innerHTML = "⚠️ Errore di ascolto: " + event.error;
+        };
+
+        recognition.onend = function() {
+            isRecognizing = false;
+            startBtn.classList.remove('recording');
+            startBtn.innerText = "🎙️ Avvia Registrazione";
+            stopBtn.disabled = true;
+            statusText.innerHTML = "Stato: Registrazione fermata. Puoi copiare il testo.";
+        };
+    }
+
+    function startRecording() {
+        if (recognition && !isRecognizing) {
+            try {
+                recognition.start();
+            } catch (e) {
+                console.error(e);
+            }
+        }
+    }
+
+    function stopRecording() {
+        if (recognition && isRecognizing) {
+            recognition.stop();
+        }
+    }
+
+    function copyText() {
+        resultText.select();
+        resultText.setSelectionRange(0, 99999); // Per dispositivi mobili
+        navigator.clipboard.writeText(resultText.value).then(() => {
+            alert("Testo copiato negli appunti! Ora puoi incollarlo su Google Drive.");
+        }, () => {
+            alert("Errore durante la copia.");
+        });
+    }
+</script>
+
+</body>
+</html>
