@@ -80,6 +80,7 @@
             padding: 8px;
             border-radius: 6px;
             border: 1px solid #d2e3fc;
+            cursor: pointer;
         }
         .format-btn:hover {
             background-color: #d2e3fc;
@@ -130,7 +131,7 @@
 
 <div class="container">
     <h2>Diario Domiciliare Al Volo</h2>
-    <p class="subtitle">Registra e rifinisci il testo per email o relazioni.</p>
+    <p class="subtitle">Registra, estrai le osservazioni e formatta in un tap.</p>
 
     <div class="btn-group">
         <button id="startBtn" onclick="startRecording()">🎙️ Avvia Registrazione</button>
@@ -139,10 +140,10 @@
 
     <div class="status" id="statusText">Stato: Pronto per registrare</div>
 
-    <!-- Pulsanti per perfezionare il testo -->
+    <!-- Pulsanti di formattazione intelligente -->
     <div class="format-toolbar">
-        <button class="format-btn" onclick="refineAsEmail()">✉️ Migliora per Email</button>
-        <button class="format-btn" onclick="refineAsReport()">📝 Migliora come Relazione</button>
+        <button class="format-btn" onclick="refineAsEmail()">✉️ Pulisci per Email</button>
+        <button class="format-btn" onclick="refineAsReport()">📝 Estrai Elenco Punti</button>
     </div>
 
     <textarea id="resultText" placeholder="La trascrizione comparirà qui..."></textarea>
@@ -153,7 +154,7 @@
     <div class="instructions">
         <strong>Come usarla:</strong><br>
         1. Registra mentre vai in macchina.<br>
-        2. Clicca sui pulsanti in alto per correggere, aggiungere punteggiatura e arricchire il testo.<br>
+        2. Usa "Pulisci per Email" per fluidificare il testo o "Estrai Elenco Punti" per creare i punti chiave.<br>
         3. Copia o invialo a Google Drive.
     </div>
 </div>
@@ -232,50 +233,64 @@
         }
     }
 
-    // Funzione intelligente per ripulire, arricchire e formattare il testo grezzo
-    function cleanAndEnhanceText(text) {
-        if (!text) return "";
+    // Funzione intelligente per spezzare il testo in frasi logiche e pulite
+    function extractSentences(text) {
+        if (!text) return [];
+        let cleanText = text.replace(/\s+/g, ' ').trim();
         
-        // Rimuove spazi doppi e pulisce le ripetizioni comuni del parlato
-        let cleaned = text.trim().replace(/\s+/g, '');
-        
-        // Divide in frasi approssimative basate su pause o congiunzioni base
-        let sentences = text.split(/[\.\,\?]\s*|\s+e\s+|\s+ma\s+|\s+perché\s+/gi);
-        
-        let enrichedParts = [];
-        sentences.forEach(s => {
-            s = s.trim();
-            if (s.length > 2) {
-                // Rende la prima lettera maiuscola e aggiunge una struttura fluida
-                s = s.charAt(0).toUpperCase() + s.slice(1);
-                enrichedParts.push(s);
+        // Sostituisce alcune congiunzioni frequenti nel parlato con punti per spezzare i periodi
+        cleanText = cleanText
+            .replace(/\s+e poi\s+/gi, '. Inoltre, ')
+            .replace(/\s+allora\s+/gi, ', quindi ')
+            .replace(/\s+quindi\s+/gi, '. Di conseguenza, ')
+            .replace(/\s+ma\s+/gi, ', ma ');
+
+        // Divide il testo in base alla punteggiatura esistente o alle congiunzioni forti
+        let parts = cleanText.split(/[\.\!\?]/g);
+        let sentences = [];
+
+        parts.forEach(part => {
+            part = part.trim();
+            if (part.length > 2) {
+                // Se la frase è troppo lunga senza pause, la suddivide ulteriormente a metà
+                let words = part.split(' ');
+                if (words.length > 14) {
+                    let mid = Math.floor(words.length / 2);
+                    let p1 = words.slice(0, mid).join(' ');
+                    let p2 = words.slice(mid).join(' ');
+                    sentences.push(p1.charAt(0).toUpperCase() + p1.slice(1));
+                    sentences.push(p2.charAt(0).toUpperCase() + p2.slice(1));
+                } else {
+                    sentences.push(part.charAt(0).toUpperCase() + part.slice(1));
+                }
             }
         });
 
-        // Ricostruisce il testo inserendo congiunzioni e punteggiatura corretta
-        return enrichedParts.join('. ') + '.';
+        return sentences;
     }
 
+    // Pulsante 1: Pulisce il testo e lo rende un flusso scorrevole per email
     function refineAsEmail() {
         let rawText = resultText.value;
         if (!rawText.trim()) return;
 
-        let processed = cleanAndEnhanceText(rawText);
-        
-        // Adatta il testo arricchendolo in stile email professionale
-        let emailStyle = `In merito all'intervento odierno, si segnala quanto segue:\n\n${processed}\n\nSi resta a disposizione per eventuali aggiornamenti o confronti in merito.`;
-        resultText.value = emailStyle;
+        let sentences = extractSentences(rawText);
+        resultText.value = sentences.join('. ') + '.';
     }
 
+    // Pulsante 2: Estrae le frasi e le trasforma in un elenco puntato di osservazioni
     function refineAsReport() {
         let rawText = resultText.value;
         if (!rawText.trim()) return;
 
-        let processed = cleanAndEnhanceText(rawText);
+        let sentences = extractSentences(rawText);
+        let bulletList = "Osservazioni dell'intervento:\n";
         
-        // Adatta il testo arricchendolo in stile relazione descrittiva
-        let reportStyle = `Resoconto Dettagliato Intervento Domiciliare:\n\nDurante l'attività odierna si evidenziano i seguenti elementi significativi:\n- ${processed}\n\nUlteriori osservazioni educative rimangono registrate agli atti per il monitoraggio del percorso.`;
-        resultText.value = reportStyle;
+        sentences.forEach(s => {
+            bulletList += `- ${s}.\n`;
+        });
+
+        resultText.value = bulletList.trim();
     }
 
     function copyText() {
