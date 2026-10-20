@@ -70,14 +70,14 @@
         }
         textarea {
             width: 100%;
-            height: 200px;
+            height: 180px;
             padding: 12px;
             font-size: 1rem;
             border: 1px solid #ddd;
             border-radius: 8px;
             box-sizing: border-box;
             resize: vertical;
-            margin-bottom: 15px;
+            margin-bottom: 12px;
         }
         .status {
             font-size: 0.85rem;
@@ -86,19 +86,22 @@
             margin-bottom: 15px;
             font-style: italic;
         }
-        .copy-btn {
+        .action-btn {
             width: 100%;
-            background-color: #34a853;
-            color: white;
             padding: 12px;
             border-radius: 8px;
             font-size: 1rem;
             font-weight: bold;
             border: none;
             cursor: pointer;
+            margin-bottom: 10px;
+            color: white;
         }
+        .copy-btn { background-color: #34a853; }
+        .drive-btn { background-color: #4285F4; display: none; } /* Appare se il telefono supporta la condivisione diretta */
+        
         .instructions {
-            margin-top: 25px;
+            margin-top: 20px;
             font-size: 0.85rem;
             color: #777;
             background: #f8f9fa;
@@ -111,7 +114,7 @@
 
 <div class="container">
     <h2>Diario Domiciliare Al Volo</h2>
-    <p class="subtitle">Parla alla fine dell'intervento. Il testo verrà trascritto senza ripetizioni.</p>
+    <p class="subtitle">Parla alla fine dell'intervento. Trascrizione istantanea.</p>
 
     <div class="btn-group">
         <button id="startBtn" onclick="startRecording()">🎙️ Avvia Registrazione</button>
@@ -122,13 +125,13 @@
 
     <textarea id="resultText" placeholder="La trascrizione comparirà qui..."></textarea>
 
-    <button class="copy-btn" onclick="copyText()">📋 Copia negli Appunti</button>
+    <button class="action-btn copy-btn" onclick="copyText()">📋 Copia negli Appunti</button>
+    <button id="driveBtn" class="action-btn drive-btn" onclick="shareToDrive()">📁 Invia a Google Drive / Altre App</button>
 
     <div class="instructions">
         <strong>Come usarla:</strong><br>
         1. Premi "Avvia Registrazione" mentre vai verso la macchina.<br>
-        2. Parla con calma.<br>
-        3. A casa, premi "Copia" e incollalo nel Google Drive della famiglia.
+        2. A fine dettatura, copia il testo o invialo direttamente alla cartella di Google Drive.
     </div>
 </div>
 
@@ -137,9 +140,15 @@
     const stopBtn = document.getElementById('stopBtn');
     const statusText = document.getElementById('statusText');
     const resultText = document.getElementById('resultText');
+    const driveBtn = document.getElementById('driveBtn');
 
     let recognition;
     let isRecognizing = false;
+
+    // Mostra il pulsante di condivisione nativa se il browser del telefono lo supporta
+    if (navigator.share) {
+        driveBtn.style.display = 'block';
+    }
 
     window.SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
@@ -149,7 +158,7 @@
     } else {
         recognition = new SpeechRecognition();
         recognition.lang = 'it-IT';
-        recognition.interimResults = false; // Modificato a false per evitare duplicazioni in tempo reale
+        recognition.interimResults = false;
         recognition.continuous = true;
 
         recognition.onstart = function() {
@@ -181,7 +190,7 @@
             startBtn.classList.remove('recording');
             startBtn.innerText = "🎙️ Avvia Registrazione";
             stopBtn.disabled = true;
-            statusText.innerHTML = "Stato: Registrazione fermata. Puoi copiare il testo.";
+            statusText.innerHTML = "Stato: Registrazione fermata.";
         };
     }
 
@@ -209,6 +218,19 @@
         }, () => {
             alert("Errore durante la copia.");
         });
+    }
+
+    async function shareToDrive() {
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: 'Nota Domiciliare',
+                    text: resultText.value
+                });
+            } catch (error) {
+                console.log('Condivisione annullata o fallita', error);
+            }
+        }
     }
 </script>
 
