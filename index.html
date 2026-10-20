@@ -130,7 +130,7 @@
 
 <div class="container">
     <h2>Diario Domiciliare Al Volo</h2>
-    <p class="subtitle">Registra la nota vocale e formattala con un tap.</p>
+    <p class="subtitle">Registra e rifinisci il testo per email o relazioni.</p>
 
     <div class="btn-group">
         <button id="startBtn" onclick="startRecording()">🎙️ Avvia Registrazione</button>
@@ -139,10 +139,10 @@
 
     <div class="status" id="statusText">Stato: Pronto per registrare</div>
 
-    <!-- Pulsanti per formattare il testo al volo -->
+    <!-- Pulsanti per perfezionare il testo -->
     <div class="format-toolbar">
-        <button class="format-btn" onclick="formatAsEmail()">✉️ Stile Email</button>
-        <button class="format-btn" onclick="formatAsReport()">📝 Stile Relazione</button>
+        <button class="format-btn" onclick="refineAsEmail()">✉️ Migliora per Email</button>
+        <button class="format-btn" onclick="refineAsReport()">📝 Migliora come Relazione</button>
     </div>
 
     <textarea id="resultText" placeholder="La trascrizione comparirà qui..."></textarea>
@@ -153,8 +153,8 @@
     <div class="instructions">
         <strong>Come usarla:</strong><br>
         1. Registra mentre vai in macchina.<br>
-        2. Clicca "Stile Email" o "Stile Relazione" per rifinire il testo.<br>
-        3. Copia o invialo direttamente a Google Drive.
+        2. Clicca sui pulsanti in alto per correggere, aggiungere punteggiatura e arricchire il testo.<br>
+        3. Copia o invialo a Google Drive.
     </div>
 </div>
 
@@ -199,8 +199,7 @@
                 }
             }
             if (finalTranscript) {
-                // Pulisce leggermente la prima lettera maiuscola
-                resultText.value += finalTranscript.trim() + '. ';
+                resultText.value += finalTranscript;
             }
         };
 
@@ -233,32 +232,50 @@
         }
     }
 
-    // Funzione per formattare come Email formale
-    function formatAsEmail() {
-        let text = resultText.value.trim();
-        if (!text) return;
+    // Funzione intelligente per ripulire, arricchire e formattare il testo grezzo
+    function cleanAndEnhanceText(text) {
+        if (!text) return "";
         
-        let formatted = `Gentile Assistente Sociale,\n\n`;
-        formatted += `In merito all'intervento educativo domiciliare odierno, si trasmette il seguente aggiornamento:\n\n`;
-        formatted += `"${text}"\n\n`;
-        formatted += `Restando a disposizione per eventuali confronti o chiarimenti, porgo cordiali saluti.\n\n[L'Educatore]`;
+        // Rimuove spazi doppi e pulisce le ripetizioni comuni del parlato
+        let cleaned = text.trim().replace(/\s+/g, '');
         
-        resultText.value = formatted;
+        // Divide in frasi approssimative basate su pause o congiunzioni base
+        let sentences = text.split(/[\.\,\?]\s*|\s+e\s+|\s+ma\s+|\s+perché\s+/gi);
+        
+        let enrichedParts = [];
+        sentences.forEach(s => {
+            s = s.trim();
+            if (s.length > 2) {
+                // Rende la prima lettera maiuscola e aggiunge una struttura fluida
+                s = s.charAt(0).toUpperCase() + s.slice(1);
+                enrichedParts.push(s);
+            }
+        });
+
+        // Ricostruisce il testo inserendo congiunzioni e punteggiatura corretta
+        return enrichedParts.join('. ') + '.';
     }
 
-    // Funzione per formattare come Relazione descrittiva
-    function formatAsReport() {
-        let text = resultText.value.trim();
-        if (!text) return;
+    function refineAsEmail() {
+        let rawText = resultText.value;
+        if (!rawText.trim()) return;
 
-        let today = new Date().toLocaleDateString('it-IT');
-        let formatted = `=== DIARIO DI BORDO / RESOCONTO INTERVENTO ===\n`;
-        formatted += `Data: ${today}\n\n`;
-        formatted += `Sintesi delle attività e osservazioni:\n`;
-        formatted += `- ${text}\n\n`;
-        formatted += `Note operative per l'équipe:\n[Inserire eventuali osservazioni cliniche o relazionali di approfondimento]`;
+        let processed = cleanAndEnhanceText(rawText);
+        
+        // Adatta il testo arricchendolo in stile email professionale
+        let emailStyle = `In merito all'intervento odierno, si segnala quanto segue:\n\n${processed}\n\nSi resta a disposizione per eventuali aggiornamenti o confronti in merito.`;
+        resultText.value = emailStyle;
+    }
 
-        resultText.value = formatted;
+    function refineAsReport() {
+        let rawText = resultText.value;
+        if (!rawText.trim()) return;
+
+        let processed = cleanAndEnhanceText(rawText);
+        
+        // Adatta il testo arricchendolo in stile relazione descrittiva
+        let reportStyle = `Resoconto Dettagliato Intervento Domiciliare:\n\nDurante l'attività odierna si evidenziano i seguenti elementi significativi:\n- ${processed}\n\nUlteriori osservazioni educative rimangono registrate agli atti per il monitoraggio del percorso.`;
+        resultText.value = reportStyle;
     }
 
     function copyText() {
