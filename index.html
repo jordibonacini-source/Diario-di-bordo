@@ -39,7 +39,7 @@
         .btn-group {
             display: flex;
             gap: 10px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
         button {
             flex: 1;
@@ -68,9 +68,25 @@
             50% { opacity: 0.6; }
             100% { opacity: 1; }
         }
+        .format-toolbar {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .format-btn {
+            background-color: #e8f0fe;
+            color: #1a73e8;
+            font-size: 0.85rem;
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid #d2e3fc;
+        }
+        .format-btn:hover {
+            background-color: #d2e3fc;
+        }
         textarea {
             width: 100%;
-            height: 180px;
+            height: 200px;
             padding: 12px;
             font-size: 1rem;
             border: 1px solid #ddd;
@@ -98,7 +114,7 @@
             color: white;
         }
         .copy-btn { background-color: #34a853; }
-        .drive-btn { background-color: #4285F4; display: none; } /* Appare se il telefono supporta la condivisione diretta */
+        .drive-btn { background-color: #4285F4; display: none; }
         
         .instructions {
             margin-top: 20px;
@@ -114,7 +130,7 @@
 
 <div class="container">
     <h2>Diario Domiciliare Al Volo</h2>
-    <p class="subtitle">Parla alla fine dell'intervento. Trascrizione istantanea.</p>
+    <p class="subtitle">Registra la nota vocale e formattala con un tap.</p>
 
     <div class="btn-group">
         <button id="startBtn" onclick="startRecording()">🎙️ Avvia Registrazione</button>
@@ -123,6 +139,12 @@
 
     <div class="status" id="statusText">Stato: Pronto per registrare</div>
 
+    <!-- Pulsanti per formattare il testo al volo -->
+    <div class="format-toolbar">
+        <button class="format-btn" onclick="formatAsEmail()">✉️ Stile Email</button>
+        <button class="format-btn" onclick="formatAsReport()">📝 Stile Relazione</button>
+    </div>
+
     <textarea id="resultText" placeholder="La trascrizione comparirà qui..."></textarea>
 
     <button class="action-btn copy-btn" onclick="copyText()">📋 Copia negli Appunti</button>
@@ -130,8 +152,9 @@
 
     <div class="instructions">
         <strong>Come usarla:</strong><br>
-        1. Premi "Avvia Registrazione" mentre vai verso la macchina.<br>
-        2. A fine dettatura, copia il testo o invialo direttamente alla cartella di Google Drive.
+        1. Registra mentre vai in macchina.<br>
+        2. Clicca "Stile Email" o "Stile Relazione" per rifinire il testo.<br>
+        3. Copia o invialo direttamente a Google Drive.
     </div>
 </div>
 
@@ -145,7 +168,6 @@
     let recognition;
     let isRecognizing = false;
 
-    // Mostra il pulsante di condivisione nativa se il browser del telefono lo supporta
     if (navigator.share) {
         driveBtn.style.display = 'block';
     }
@@ -177,7 +199,8 @@
                 }
             }
             if (finalTranscript) {
-                resultText.value += finalTranscript;
+                // Pulisce leggermente la prima lettera maiuscola
+                resultText.value += finalTranscript.trim() + '. ';
             }
         };
 
@@ -190,7 +213,7 @@
             startBtn.classList.remove('recording');
             startBtn.innerText = "🎙️ Avvia Registrazione";
             stopBtn.disabled = true;
-            statusText.innerHTML = "Stato: Registrazione fermata.";
+            statusText.innerHTML = "Stato: Registrazione completata.";
         };
     }
 
@@ -208,6 +231,34 @@
         if (recognition && isRecognizing) {
             recognition.stop();
         }
+    }
+
+    // Funzione per formattare come Email formale
+    function formatAsEmail() {
+        let text = resultText.value.trim();
+        if (!text) return;
+        
+        let formatted = `Gentile Assistente Sociale,\n\n`;
+        formatted += `In merito all'intervento educativo domiciliare odierno, si trasmette il seguente aggiornamento:\n\n`;
+        formatted += `"${text}"\n\n`;
+        formatted += `Restando a disposizione per eventuali confronti o chiarimenti, porgo cordiali saluti.\n\n[L'Educatore]`;
+        
+        resultText.value = formatted;
+    }
+
+    // Funzione per formattare come Relazione descrittiva
+    function formatAsReport() {
+        let text = resultText.value.trim();
+        if (!text) return;
+
+        let today = new Date().toLocaleDateString('it-IT');
+        let formatted = `=== DIARIO DI BORDO / RESOCONTO INTERVENTO ===\n`;
+        formatted += `Data: ${today}\n\n`;
+        formatted += `Sintesi delle attività e osservazioni:\n`;
+        formatted += `- ${text}\n\n`;
+        formatted += `Note operative per l'équipe:\n[Inserire eventuali osservazioni cliniche o relazionali di approfondimento]`;
+
+        resultText.value = formatted;
     }
 
     function copyText() {
@@ -228,7 +279,7 @@
                     text: resultText.value
                 });
             } catch (error) {
-                console.log('Condivisione annullata o fallita', error);
+                console.log('Condivisione annullata', error);
             }
         }
     }
